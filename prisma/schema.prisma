@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MEN
+  WOMEN
+  UNISEX
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  role          Role      @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  orders        Order[]
+  addresses     Address[]
+  wishlist      WishlistItem[]
+  
+  // Password Reset
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  
+  @@index([email])
+}
+
+model Address {
+  id            String    @id @default(cuid())
+  userId        String
+  firstName     String
+  lastName      String
+  company       String?
+  street        String
+  city          String
+  state         String
+  zipCode       String
+  country       String
+  phone         String
+  isDefault     Boolean   @default(false)
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[]
+  
+  @@index([userId])
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String
+  gender        Gender
+  category      String
+  price         Int       // in cents
+  compareAtPrice Int?     // in cents
+  images        String[]
+  colors        Json      // [{name: "Black", hex: "#000"}]
+  sizes         String[]  // ["XS", "S", "M", "L", "XL"]
+  materials     String?
+  careInstructions String?
+  featured      Boolean   @default(false)
+  bestSeller    Boolean   @default(false)
+  
+  // SEO
+  metaTitle     String?
+  metaDescription String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  wishlistItems WishlistItem[]
+  
+  @@index([slug])
+  @@index([gender])
+  @@index([category])
+  @@index([featured])
+}
+
+model ProductVariant {
+  id            String    @id @default(cuid())
+  productId     String
+  color         String
+  size          String
+  sku           String    @unique
+  inventory     Int       @default(0)
+  price         Int?      // optional, falls back to product price
+  images        String[]  // optional, falls back to product images
+  
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+  
+  @@unique([productId, color, size])
+  @@index([sku])
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  userId          String?
+  email           String
+  
+  // Payment
+  total           Int           // in cents
+  subtotal        Int
+  tax             Int
+  shipping        Int
+  paymentStatus   PaymentStatus @default(PENDING)
+  stripePaymentId String?
+  couponCode      String?
+  discount        Int           @default(0)
+  
+  // Fulfillment
+  orderStatus     OrderStatus   @default(PENDING)
+  shippingAddressId String
+  trackingNumber  String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  user            User?         @relation(fields: [userId], references: [id])
+  shippingAddress Address       @relation(fields: [shippingAddressId], references: [id])
+  items           OrderItem[]
+  
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([email])
+}
+
+model OrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  productId     String
+  variantId     String
+  quantity      Int
+  price         Int       // in cents (price at time of purchase)
+  
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product   @relation(fields: [productId], references: [id])
+  variant       ProductVariant @relation(fields: [variantId], references: [id])
+  
+  @@index([orderId])
+}
+
+model WishlistItem {
+  id            String    @id @default(cuid())
+  userId        String
+  productId     String
+  createdAt     DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model Newsletter {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  subscribedAt  DateTime  @default(now())
+  
+  @@index([email])
+}
+
+model InstagramPost {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  link      String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SocialLink {
+  id        String   @id @default(cuid())
+  platform  String   // e.g., "Instagram", "Facebook"
+  url       String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Coupon {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  discountType  String   // "PERCENT" or "FIXED"
+  value         Int      // Store as cents or whole number for percentage
+  expiresAt     DateTime?
+  usageLimit    Int?
+  usageCount    Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model StoreSettings {
+  id                    String   @id @default(cuid())
+  storeName             String   @default("Luxury Apparel")
+  storeEmail            String   @default("hello@luxuryapparel.com")
+  supportEmail          String   @default("support@luxuryapparel.com")
+  
+  // Shipping & Tax
+  shippingStandard      Int      @default(1500) // in cents
+  shippingExpress       Int      @default(3000) // in cents
+  freeShippingThreshold Int      @default(20000) // in cents
+  taxRate               Float    @default(8.0)
+  
+  // Notifications
+  orderEmails           Boolean  @default(true)
+  shippingEmails        Boolean  @default(true)
+  marketingEmails       Boolean  @default(true)
+  
+  updatedAt             DateTime @updatedAt
+}

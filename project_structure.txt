@@ -1,0 +1,64 @@
+luxury-apparel/
+├── app/
+│   ├── (auth)/
+│   │   ├── login/
+│   │   ├── register/
+│   │   └── layout.tsx
+│   ├── (shop)/
+│   │   ├── page.tsx                 # Home
+│   │   ├── shop/
+│   │   │   ├── [gender]/
+│   │   │   │   └── page.tsx         # Shop listing
+│   │   │   └── page.tsx
+│   │   ├── product/
+│   │   │   └── [slug]/
+│   │   │       └── page.tsx         # Product detail
+│   │   ├── cart/
+│   │   │   └── page.tsx
+│   │   ├── checkout/
+│   │   │   └── page.tsx
+│   │   ├── account/
+│   │   │   ├── page.tsx
+│   │   │   ├── orders/
+│   │   │   ├── wishlist/
+│   │   │   └── profile/
+│   │   ├── about/
+│   │   ├── sustainability/
+│   │   ├── contact/
+│   │   └── layout.tsx
+│   ├── admin/
+│   │   ├── page.tsx                 # Dashboard
+│   │   ├── products/
+│   │   ├── orders/
+│   │   ├── customers/
+│   │   ├── analytics/
+│   │   └── layout.tsx
+│   ├── api/
+│   │   ├── auth/
+│   │   ├── products/
+│   │   ├── orders/
+│   │   ├── stripe/
+│   │   └── webhooks/
+│   ├── layout.tsx
+│   └── globals.css
+├── components/
+│   ├── ui/
+│   ├── shop/
+│   ├── admin/
+│   ├── layout/
+│   └── shared/
+├── lib/
+│   ├── prisma.ts
+│   ├── stripe.ts
+│   ├── auth.ts
+│   └── utils.ts
+├── prisma/
+│   └── schema.prisma
+├── public/
+│   └── images/
+├── types/
+├── middleware.ts
+├── next.config.js
+├── tailwind.config.ts
+├── tsconfig.json
+└── package.json

@@ -1,0 +1,2565 @@
+# LUXURY APPAREL E-COMMERCE PLATFORM
+
+## Complete Production-Ready Codebase
+
+I'll deliver a fully functional luxury e-commerce platform. Here's the complete implementation:
+
+---
+
+## 📁 PROJECT STRUCTURE
+
+```
+luxury-apparel/
+├── app/
+│   ├── (auth)/
+│   │   ├── login/
+│   │   ├── register/
+│   │   └── layout.tsx
+│   ├── (shop)/
+│   │   ├── page.tsx                 # Home
+│   │   ├── shop/
+│   │   │   ├── [gender]/
+│   │   │   │   └── page.tsx         # Shop listing
+│   │   │   └── page.tsx
+│   │   ├── product/
+│   │   │   └── [slug]/
+│   │   │       └── page.tsx         # Product detail
+│   │   ├── cart/
+│   │   │   └── page.tsx
+│   │   ├── checkout/
+│   │   │   └── page.tsx
+│   │   ├── account/
+│   │   │   ├── page.tsx
+│   │   │   ├── orders/
+│   │   │   ├── wishlist/
+│   │   │   └── profile/
+│   │   ├── about/
+│   │   ├── sustainability/
+│   │   ├── contact/
+│   │   └── layout.tsx
+│   ├── admin/
+│   │   ├── page.tsx                 # Dashboard
+│   │   ├── products/
+│   │   ├── orders/
+│   │   ├── customers/
+│   │   ├── analytics/
+│   │   └── layout.tsx
+│   ├── api/
+│   │   ├── auth/
+│   │   ├── products/
+│   │   ├── orders/
+│   │   ├── stripe/
+│   │   └── webhooks/
+│   ├── layout.tsx
+│   └── globals.css
+├── components/
+│   ├── ui/
+│   ├── shop/
+│   ├── admin/
+│   ├── layout/
+│   └── shared/
+├── lib/
+│   ├── prisma.ts
+│   ├── stripe.ts
+│   ├── auth.ts
+│   └── utils.ts
+├── prisma/
+│   └── schema.prisma
+├── public/
+│   └── images/
+├── types/
+├── middleware.ts
+├── next.config.js
+├── tailwind.config.ts
+├── tsconfig.json
+└── package.json
+```
+
+---
+
+## 📦 INSTALLATION & SETUP
+
+### **package.json**
+
+```json
+{
+  "name": "luxury-apparel",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "next": "14.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@prisma/client": "^5.9.1",
+    "@stripe/stripe-js": "^3.0.6",
+    "stripe": "^14.14.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "next-auth": "^4.24.5",
+    "framer-motion": "^11.0.3",
+    "react-hook-form": "^7.49.3",
+    "zod": "^3.22.4",
+    "@hookform/resolvers": "^3.3.4",
+    "zustand": "^4.5.0",
+    "date-fns": "^3.3.1",
+    "nodemailer": "^6.9.8",
+    "sharp": "^0.33.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.1",
+    "lucide-react": "^0.323.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/nodemailer": "^6.4.14",
+    "typescript": "^5",
+    "prisma": "^5.9.1",
+    "tsx": "^4.7.0",
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^8",
+    "eslint-config-next": "14.1.0"
+  }
+}
+```
+
+---
+
+## 🗄️ DATABASE SCHEMA
+
+### **prisma/schema.prisma**
+
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MEN
+  WOMEN
+  UNISEX
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  role          Role      @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  orders        Order[]
+  addresses     Address[]
+  wishlist      WishlistItem[]
+  
+  @@index([email])
+}
+
+model Address {
+  id            String    @id @default(cuid())
+  userId        String
+  firstName     String
+  lastName      String
+  company       String?
+  street        String
+  city          String
+  state         String
+  zipCode       String
+  country       String
+  phone         String
+  isDefault     Boolean   @default(false)
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[]
+  
+  @@index([userId])
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String
+  gender        Gender
+  category      String
+  price         Int       // in cents
+  compareAtPrice Int?     // in cents
+  images        String[]
+  colors        Json      // [{name: "Black", hex: "#000"}]
+  sizes         String[]  // ["XS", "S", "M", "L", "XL"]
+  materials     String?
+  careInstructions String?
+  featured      Boolean   @default(false)
+  bestSeller    Boolean   @default(false)
+  
+  // SEO
+  metaTitle     String?
+  metaDescription String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  wishlistItems WishlistItem[]
+  
+  @@index([slug])
+  @@index([gender])
+  @@index([category])
+  @@index([featured])
+}
+
+model ProductVariant {
+  id            String    @id @default(cuid())
+  productId     String
+  color         String
+  size          String
+  sku           String    @unique
+  inventory     Int       @default(0)
+  
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+  
+  @@unique([productId, color, size])
+  @@index([sku])
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  userId          String?
+  email           String
+  
+  // Payment
+  total           Int           // in cents
+  subtotal        Int
+  tax             Int
+  shipping        Int
+  paymentStatus   PaymentStatus @default(PENDING)
+  stripePaymentId String?
+  
+  // Fulfillment
+  orderStatus     OrderStatus   @default(PENDING)
+  shippingAddressId String
+  trackingNumber  String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  user            User?         @relation(fields: [userId], references: [id])
+  shippingAddress Address       @relation(fields: [shippingAddressId], references: [id])
+  items           OrderItem[]
+  
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([email])
+}
+
+model OrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  productId     String
+  variantId     String
+  quantity      Int
+  price         Int       // in cents (price at time of purchase)
+  
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product   @relation(fields: [productId], references: [id])
+  variant       ProductVariant @relation(fields: [variantId], references: [id])
+  
+  @@index([orderId])
+}
+
+model WishlistItem {
+  id            String    @id @default(cuid())
+  userId        String
+  productId     String
+  createdAt     DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model Newsletter {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  subscribedAt  DateTime  @default(now())
+  
+  @@index([email])
+}
+```
+
+---
+
+## ⚙️ CONFIGURATION FILES
+
+### **next.config.js**
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+    ],
+    formats: ['image/avif', 'image/webp'],
+  },
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+  },
+}
+
+module.exports = nextConfig
+```
+
+### **tailwind.config.ts**
+
+```typescript
+import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        ivory: '#F7F6F3',
+        stone: '#D8D3C9',
+        charcoal: '#1A1A1A',
+        gold: '#B6A26A',
+        'soft-gray': '#6B6B6B',
+      },
+      fontFamily: {
+        serif: ['var(--font-playfair)', 'Georgia', 'serif'],
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+      },
+      spacing: {
+        '128': '32rem',
+        '144': '36rem',
+      },
+      maxWidth: {
+        '8xl': '88rem',
+      },
+      typography: {
+        DEFAULT: {
+          css: {
+            maxWidth: '65ch',
+          },
+        },
+      },
+    },
+  },
+  plugins: [
+    require('@tailwindcss/typography'),
+    require('@tailwindcss/forms'),
+  ],
+}
+export default config
+```
+
+### **tsconfig.json**
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+### **.env.example**
+
+```bash
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/luxury_apparel"
+
+# NextAuth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-key-min-32-chars"
+
+# Stripe
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+
+# Email (Nodemailer)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASSWORD="your-app-password"
+EMAIL_FROM="noreply@luxuryapparel.com"
+
+# App
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+---
+
+## 🎨 GLOBAL STYLES
+
+### **app/globals.css**
+
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-playfair: 'Playfair Display', serif;
+    --font-inter: 'Inter', sans-serif;
+  }
+
+  * {
+    @apply border-charcoal/10;
+  }
+
+  html {
+    @apply antialiased scroll-smooth;
+  }
+
+  body {
+    @apply bg-ivory text-charcoal font-sans;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-charcoal text-ivory px-8 py-3 rounded-none font-medium 
+           tracking-wide transition-all duration-300 hover:bg-charcoal/90
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply border-2 border-charcoal text-charcoal px-8 py-3 rounded-none 
+           font-medium tracking-wide transition-all duration-300 
+           hover:bg-charcoal hover:text-ivory;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 border border-charcoal/20 rounded-none
+           bg-white focus:outline-none focus:border-charcoal
+           transition-colors duration-200;
+  }
+
+  .section-padding {
+    @apply px-6 md:px-12 lg:px-20 py-16 md:py-24;
+  }
+
+  .container-luxury {
+    @apply max-w-8xl mx-auto;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animation-fade-in {
+    animation: fadeIn 0.6s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F7F6F3;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B6A26A;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9a8a5a;
+}
+```
+
+---
+
+## 🏗️ CORE UTILITIES & LIBRARIES
+
+### **lib/prisma.ts**
+
+```typescript
+import { PrismaClient } from '@prisma/client'
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+})
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+```
+
+### **lib/stripe.ts**
+
+```typescript
+import Stripe from 'stripe'
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY is not defined')
+}
+
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16',
+  typescript: true,
+})
+
+export const formatAmountForStripe = (amount: number): number => {
+  return Math.round(amount)
+}
+
+export const formatAmountFromStripe = (amount: number): number => {
+  return amount
+}
+```
+
+### **lib/utils.ts**
+
+```typescript
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+export function formatPrice(price: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(price / 100)
+}
+
+export function generateOrderNumber(): string {
+  const timestamp = Date.now().toString(36).toUpperCase()
+  const random = Math.random().toString(36).substring(2, 7).toUpperCase()
+  return `ORD-${timestamp}-${random}`
+}
+
+export function generateSKU(productName: string, color: string, size: string): string {
+  const prefix = productName
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 3)
+  
+  const colorCode = color.substring(0, 3).toUpperCase()
+  const sizeCode = size.toUpperCase()
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase()
+  
+  return `${prefix}-${colorCode}-${sizeCode}-${random}`
+}
+
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/--+/g, '-')
+    .trim()
+}
+```
+
+### **lib/auth.ts**
+
+```typescript
+import { NextAuthOptions } from 'next-auth'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import { prisma } from './prisma'
+import bcrypt from 'bcryptjs'
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      name: 'Credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Invalid credentials')
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        })
+
+        if (!user) {
+          throw new Error('User not found')
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        )
+
+        if (!isPasswordValid) {
+          throw new Error('Invalid password')
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+          role: user.role,
+        }
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role
+        token.id = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session?.user) {
+        session.user.role = token.role
+        session.user.id = token.id
+      }
+      return session
+    },
+  },
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
+  session: {
+    strategy: 'jwt',
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+}
+```
+
+### **types/index.ts**
+
+```typescript
+import { Product, User, Order, ProductVariant } from '@prisma/client'
+
+export type ProductWithVariants = Product & {
+  variants: ProductVariant[]
+}
+
+export type CartItem = {
+  product: Product
+  variant: ProductVariant
+  quantity: number
+}
+
+export type WishlistProduct = {
+  id: string
+  product: Product
+}
+
+export interface FilterOptions {
+  gender?: 'MEN' | 'WOMEN' | 'UNISEX'
+  category?: string
+  colors?: string[]
+  sizes?: string[]
+  priceRange?: [number, number]
+  sortBy?: 'newest' | 'price-asc' | 'price-desc' | 'name'
+}
+
+export interface CheckoutFormData {
+  email: string
+  firstName: string
+  lastName: string
+  company?: string
+  street: string
+  city: string
+  state: string
+  zipCode: string
+  country: string
+  phone: string
+}
+```
+
+---
+
+## 🛍️ STATE MANAGEMENT (ZUSTAND)
+
+### **lib/store/cart-store.ts**
+
+```typescript
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { CartItem } from '@/types'
+import { Product, ProductVariant } from '@prisma/client'
+
+interface CartStore {
+  items: CartItem[]
+  addItem: (product: Product, variant: ProductVariant, quantity?: number) => void
+  removeItem: (variantId: string) => void
+  updateQuantity: (variantId: string, quantity: number) => void
+  clearCart: () => void
+  getTotal: () => number
+  getItemCount: () => number
+}
+
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set, get) => ({
+      items: [],
+
+      addItem: (product, variant, quantity = 1) => {
+        set((state) => {
+          const existingItem = state.items.find(
+            (item) => item.variant.id === variant.id
+          )
+
+          if (existingItem) {
+            return {
+              items: state.items.map((item) =>
+                item.variant.id === variant.id
+                  ? { ...item, quantity: item.quantity + quantity }
+                  : item
+              ),
+            }
+          }
+
+          return {
+            items: [...state.items, { product, variant, quantity }],
+          }
+        })
+      },
+
+      removeItem: (variantId) => {
+        set((state) => ({
+          items: state.items.filter((item) => item.variant.id !== variantId),
+        }))
+      },
+
+      updateQuantity: (variantId, quantity) => {
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.variant.id === variantId ? { ...item, quantity } : item
+          ),
+        }))
+      },
+
+      clearCart: () => {
+        set({ items: [] })
+      },
+
+      getTotal: () => {
+        const { items } = get()
+        return items.reduce(
+          (total, item) => total + item.product.price * item.quantity,
+          0
+        )
+      },
+
+      getItemCount: () => {
+        const { items } = get()
+        return items.reduce((count, item) => count + item.quantity, 0)
+      },
+    }),
+    {
+      name: 'cart-storage',
+    }
+  )
+)
+```
+
+### **lib/store/wishlist-store.ts**
+
+```typescript
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+interface WishlistStore {
+  items: string[] // product IDs
+  addItem: (productId: string) => void
+  removeItem: (productId: string) => void
+  isInWishlist: (productId: string) => boolean
+  clearWishlist: () => void
+}
+
+export const useWishlistStore = create<WishlistStore>()(
+  persist(
+    (set, get) => ({
+      items: [],
+
+      addItem: (productId) => {
+        set((state) => ({
+          items: [...new Set([...state.items, productId])],
+        }))
+      },
+
+      removeItem: (productId) => {
+        set((state) => ({
+          items: state.items.filter((id) => id !== productId),
+        }))
+      },
+
+      isInWishlist: (productId) => {
+        return get().items.includes(productId)
+      },
+
+      clearWishlist: () => {
+        set({ items: [] })
+      },
+    }),
+    {
+      name: 'wishlist-storage',
+    }
+  )
+)
+```
+
+---
+
+## 🎯 REUSABLE UI COMPONENTS
+
+### **components/ui/Button.tsx**
+
+```typescript
+'use client'
+
+import { ButtonHTMLAttributes, forwardRef } from 'react'
+import { cn } from '@/lib/utils'
+import { cva, type VariantProps } from 'class-variance-authority'
+
+const buttonVariants = cva(
+  'inline-flex items-center justify-center font-medium tracking-wide transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed',
+  {
+    variants: {
+      variant: {
+        primary: 'bg-charcoal text-ivory hover:bg-charcoal/90',
+        secondary: 'border-2 border-charcoal text-charcoal hover:bg-charcoal hover:text-ivory',
+        ghost: 'hover:bg-charcoal/5',
+        link: 'underline-offset-4 hover:underline',
+      },
+      size: {
+        sm: 'px-6 py-2 text-sm',
+        md: 'px-8 py-3 text-base',
+        lg: 'px-10 py-4 text-lg',
+      },
+    },
+    defaultVariants: {
+      variant: 'primary',
+      size: 'md',
+    },
+  }
+)
+
+interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  isLoading?: boolean
+}
+
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, isLoading, children, ...props }, ref) => {
+    return (
+      <button
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        disabled={isLoading || props.disabled}
+        {...props}
+      >
+        {isLoading ? (
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <span>Loading...</span>
+          </div>
+        ) : (
+          children
+        )}
+      </button>
+    )
+  }
+)
+
+Button.displayName = 'Button'
+
+export default Button
+```
+
+### **components/ui/Input.tsx**
+
+```typescript
+import { InputHTMLAttributes, forwardRef } from 'react'
+import { cn } from '@/lib/utils'
+
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: string
+  error?: string
+}
+
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ className, label, error, ...props }, ref) => {
+    return (
+      <div className="w-full">
+        {label && (
+          <label className="block text-sm font-medium mb-2 text-charcoal">
+            {label}
+          </label>
+        )}
+        <input
+          className={cn(
+            'input-field',
+            error && 'border-red-500 focus:border-red-500',
+            className
+          )}
+          ref={ref}
+          {...props}
+        />
+        {error && (
+          <p className="mt-1 text-sm text-red-600">{error}</p>
+        )}
+      </div>
+    )
+  }
+)
+
+Input.displayName = 'Input'
+
+export default Input
+```
+
+### **components/ui/Select.tsx**
+
+```typescript
+import { SelectHTMLAttributes, forwardRef } from 'react'
+import { cn } from '@/lib/utils'
+
+interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label?: string
+  error?: string
+  options: { value: string; label: string }[]
+}
+
+const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ className, label, error, options, ...props }, ref) => {
+    return (
+      <div className="w-full">
+        {label && (
+          <label className="block text-sm font-medium mb-2 text-charcoal">
+            {label}
+          </label>
+        )}
+        <select
+          className={cn(
+            'input-field cursor-pointer',
+            error && 'border-red-500',
+            className
+          )}
+          ref={ref}
+          {...props}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {error && (
+          <p className="mt-1 text-sm text-red-600">{error}</p>
+        )}
+      </div>
+    )
+  }
+)
+
+Select.displayName = 'Select'
+
+export default Select
+```
+
+### **components/ui/Badge.tsx**
+
+```typescript
+import { cn } from '@/lib/utils'
+
+interface BadgeProps {
+  children: React.ReactNode
+  variant?: 'default' | 'success' | 'warning' | 'error'
+  className?: string
+}
+
+export default function Badge({ children, variant = 'default', className }: BadgeProps) {
+  const variants = {
+    default: 'bg-stone text-charcoal',
+    success: 'bg-green-100 text-green-800',
+    warning: 'bg-yellow-100 text-yellow-800',
+    error: 'bg-red-100 text-red-800',
+  }
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center px-3 py-1 text-xs font-medium tracking-wide',
+        variants[variant],
+        className
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+```
+
+---
+
+## 📱 LAYOUT COMPONENTS
+
+### **app/layout.tsx**
+
+```typescript
+import type { Metadata } from 'next'
+import { Inter, Playfair_Display } from 'next/font/google'
+import './globals.css'
+import { Providers } from './providers'
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+})
+
+export const metadata: Metadata = {
+  title: {
+    default: 'Luxury Apparel - Timeless Fashion for Men & Women',
+    template: '%s | Luxury Apparel',
+  },
+  description: 'Discover refined, minimal luxury clothing. Premium materials, timeless design, exceptional craftsmanship.',
+  keywords: ['luxury fashion', 'premium clothing', 'designer apparel', 'minimal fashion', 'timeless style'],
+  authors: [{ name: 'Luxury Apparel' }],
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://luxuryapparel.com',
+    siteName: 'Luxury Apparel',
+    title: 'Luxury Apparel - Timeless Fashion',
+    description: 'Premium clothing for the discerning individual',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Luxury Apparel',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Luxury Apparel',
+    description: 'Premium clothing for the discerning individual',
+    images: ['/og-image.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  )
+}
+```
+
+### **app/providers.tsx**
+
+```typescript
+'use client'
+
+import { SessionProvider } from 'next-auth/react'
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return <SessionProvider>{children}</SessionProvider>
+}
+```
+
+### **components/layout/Header.tsx**
+
+```typescript
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { ShoppingBag, Heart, User, Search, Menu } from 'lucide-react'
+import { useCartStore } from '@/lib/store/cart-store'
+import { useWishlistStore } from '@/lib/store/wishlist-store'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useSession } from 'next-auth/react'
+
+export default function Header() {
+  const pathname = usePathname()
+  const { getItemCount } = useCartStore()
+  const { items: wishlistItems } = useWishlistStore()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { data: session } = useSession()
+
+  const cartCount = getItemCount()
+
+  const navigation = [
+    { name: 'Women', href: '/shop/women' },
+    { name: 'Men', href: '/shop/men' },
+    { name: 'About', href: '/about' },
+    { name: 'Sustainability', href: '/sustainability' },
+  ]
+
+  return (
+    <header className="sticky top-0 z-50 bg-ivory/95 backdrop-blur-sm border-b border-charcoal/10">
+      <div className="container-luxury">
+        <div className="flex items-center justify-between h-20 px-6 md:px-12">
+          {/* Mobile menu button */}
+          <button
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+
+          {/* Logo */}
+          <Link href="/" className="flex-shrink-0">
+            <h1 className="font-serif text-2xl md:text-3xl tracking-tight">
+              LUXURY APPAREL
+            </h1>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-8">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`text-sm tracking-widest uppercase transition-colors ${
+                  pathname === item.href
+                    ? 'text-charcoal'
+                    : 'text-charcoal/60 hover:text-charcoal'
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Actions */}
+          <div className="flex items-center gap-4 md:gap-6">
+            <button className="hidden md:block hover:opacity-60 transition-opacity">
+              <Search className="h-5 w-5" />
+            </button>
+
+            <Link href="/account/wishlist" className="relative hover:opacity-60 transition-opacity">
+              <Heart className="h-5 w-5" />
+              {wishlistItems.length > 0 && (
+                <span className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-charcoal text-ivory text-xs flex items-center justify-center">
+                  {wishlistItems.length}
+                </span>
+              )}
+            </Link>
+
+            <Link href="/cart" className="relative hover:opacity-60 transition-opacity">
+              <ShoppingBag className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-charcoal text-ivory text-xs flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+
+            <Link href={session ? '/account' : '/login'} className="hover:opacity-60 transition-opacity">
+              <User className="h-5 w-5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="md:hidden border-t border-charcoal/10 overflow-hidden"
+            >
+              <nav className="flex flex-col py-4">
+                {navigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="px-6 py-3 text-sm tracking-widest uppercase hover:bg-stone/20"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </header>
+  )
+}
+```
+
+### **components/layout/Footer.tsx**
+
+```typescript
+'use client'
+
+import Link from 'next/link'
+import { Instagram, Facebook, Twitter } from 'lucide-react'
+import { useState } from 'react'
+import Button from '../ui/Button'
+
+export default function Footer() {
+  const [email, setEmail] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setMessage('')
+
+    try {
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      if (res.ok) {
+        setMessage('Thank you for subscribing!')
+        setEmail('')
+      } else {
+        setMessage('Something went wrong. Please try again.')
+      }
+    } catch (error) {
+      setMessage('Error subscribing. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const footerLinks = {
+    shop: [
+      { name: "Women's Collection", href: '/shop/women' },
+      { name: "Men's Collection", href: '/shop/men' },
+      { name: 'Best Sellers', href: '/shop?sort=bestsellers' },
+      { name: 'New Arrivals', href: '/shop?sort=newest' },
+    ],
+    company: [
+      { name: 'About Us', href: '/about' },
+      { name: 'Sustainability', href: '/sustainability' },
+      { name: 'Contact', href: '/contact' },
+      { name: 'Careers', href: '/careers' },
+    ],
+    support: [
+      { name: 'Shipping & Returns', href: '/shipping' },
+      { name: 'Size Guide', href: '/size-guide' },
+      { name: 'Care Instructions', href: '/care' },
+      { name: 'FAQ', href: '/faq' },
+    ],
+    legal: [
+      { name: 'Privacy Policy', href: '/privacy' },
+      { name: 'Terms of Service', href: '/terms' },
+      { name: 'Cookie Policy', href: '/cookies' },
+    ],
+  }
+
+  return (
+    <footer className="bg-stone/30 border-t border-charcoal/10 mt-24">
+      <div className="container-luxury section-padding">
+        {/* Newsletter */}
+        <div className="max-w-xl mx-auto text-center mb-16">
+          <h3 className="font-serif text-2xl md:text-3xl mb-4">
+            Join Our Newsletter
+          </h3>
+          <p className="text-soft-gray mb-6">
+            Receive exclusive updates on new collections, events, and offers.
+          </p>
+          <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input-field flex-1"
+              required
+            />
+            <Button type="submit" isLoading={isSubmitting}>
+              Subscribe
+            </Button>
+          </form>
+          {message && (
+            <p className="mt-2 text-sm text-charcoal">{message}</p>
+          )}
+        </div>
+
+        {/* Links */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+          <div>
+            <h4 className="font-medium mb-4 tracking-wide">Shop</h4>
+            <ul className="space-y-2">
+              {footerLinks.shop.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-soft-gray hover:text-charcoal transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-4 tracking-wide">Company</h4>
+            <ul className="space-y-2">
+              {footerLinks.company.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-soft-gray hover:text-charcoal transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-4 tracking-wide">Support</h4>
+            <ul className="space-y-2">
+              {footerLinks.support.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-soft-gray hover:text-charcoal transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-4 tracking-wide">Legal</h4>
+            <ul className="space-y-2">
+              {footerLinks.legal.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-soft-gray hover:text-charcoal transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Bottom */}
+        <div className="pt-8 border-t border-charcoal/10 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-sm text-soft-gray">
+            © {new Date().getFullYear()} Luxury Apparel. All rights reserved.
+          </p>
+
+          <div className="flex gap-6">
+            <a
+              href="https://instagram.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-charcoal hover:text-gold transition-colors"
+            >
+              <Instagram className="h-5 w-5" />
+            </a>
+            <a
+              href="https://facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-charcoal hover:text-gold transition-colors"
+            >
+              <Facebook className="h-5 w-5" />
+            </a>
+            <a
+              href="https://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-charcoal hover:text-gold transition-colors"
+            >
+              <Twitter className="h-5 w-5" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  )
+}
+```
+
+---
+
+## 🏠 HOME PAGE
+
+### **app/(shop)/page.tsx**
+
+```typescript
+import Image from 'next/image'
+import Link from 'next/link'
+import Button from '@/components/ui/Button'
+import { prisma } from '@/lib/prisma'
+import ProductCard from '@/components/shop/ProductCard'
+
+export const metadata = {
+  title: 'Home',
+}
+
+async function getFeaturedProducts() {
+  return await prisma.product.findMany({
+    where: { featured: true },
+    include: { variants: true },
+    take: 4,
+  })
+}
+
+async function getBestSellers() {
+  return await prisma.product.findMany({
+    where: { bestSeller: true },
+    include: { variants: true },
+    take: 4,
+  })
+}
+
+export default async function HomePage() {
+  const [featured, bestSellers] = await Promise.all([
+    getFeaturedProducts(),
+    getBestSellers(),
+  ])
+
+  return (
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="relative h-[90vh] flex items-center justify-center overflow-hidden">
+        <Image
+          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1920&q=80"
+          alt="Luxury fashion"
+          fill
+          className="object-cover"
+          priority
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-charcoal/20" />
+        <div className="relative z-10 text-center text-ivory px-6">
+          <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl mb-6 tracking-tight">
+            Timeless Elegance
+          </h1>
+          <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto font-light tracking-wide">
+            Discover refined luxury in every detail. Crafted for those who appreciate quiet sophistication.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Link href="/shop/women">
+              <Button size="lg" variant="primary">
+                Shop Women
+              </Button>
+            </Link>
+            <Link href="/shop/men">
+              <Button size="lg" variant="secondary" className="bg-ivory/10 border-ivory text-ivory hover:bg-ivory hover:text-charcoal">
+                Shop Men
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Collections */}
+      <section className="section-padding">
+        <div className="container-luxury">
+          <div className="grid md:grid-cols-2 gap-8">
+            <Link href="/shop/women" className="group relative h-[600px] overflow-hidden">
+              <Image
+                src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80"
+                alt="Women's Collection"
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 to-transparent" />
+              <div className="absolute bottom-12 left-12 text-ivory">
+                <h2 className="font-serif text-4xl mb-2">Women</h2>
+                <p className="text-lg font-light mb-4">Refined femininity</p>
+                <span className="inline-block border-b-2 border-ivory pb-1">
+                  Explore Collection →
+                </span>
+              </div>
+            </Link>
+
+            <Link href="/shop/men" className="group relative h-[600px] overflow-hidden">
+              <Image
+                src="https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=800&q=80"
+                alt="Men's Collection"
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 to-transparent" />
+              <div className="absolute bottom-12 left-12 text-ivory">
+                <h2 className="font-serif text-4xl mb-2">Men</h2>
+                <p className="text-lg font-light mb-4">Modern masculinity</p>
+                <span className="inline-block border-b-2 border-ivory pb-1">
+                  Explore Collection →
+                </span>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Products */}
+      {featured.length > 0 && (
+        <section className="section-padding bg-stone/20">
+          <div className="container-luxury">
+            <div className="text-center mb-12">
+              <h2 className="font-serif text-4xl md:text-5xl mb-4">
+                Featured Pieces
+              </h2>
+              <p className="text-soft-gray max-w-2xl mx-auto">
+                Curated selections that embody our commitment to timeless design and exceptional quality.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {featured.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Best Sellers */}
+      {bestSellers.length > 0 && (
+        <section className="section-padding">
+          <div className="container-luxury">
+            <div className="text-center mb-12">
+              <h2 className="font-serif text-4xl md:text-5xl mb-4">
+                Best Sellers
+              </h2>
+              <p className="text-soft-gray max-w-2xl mx-auto">
+                The most coveted pieces from our collection.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {bestSellers.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Brand Philosophy */}
+      <section className="section-padding bg-charcoal text-ivory">
+        <div className="container-luxury max-w-4xl text-center">
+          <h2 className="font-serif text-4xl md:text-5xl mb-6">
+            Our Philosophy
+          </h2>
+          <p className="text-lg leading-relaxed mb-8 font-light">
+            We believe in the power of quiet luxury. Each piece is thoughtfully designed to transcend trends, 
+            crafted from the finest materials, and made to become a cherished part of your wardrobe for years to come.
+          </p>
+          <Link href="/about">
+            <Button variant="secondary" className="border-ivory text-ivory hover:bg-ivory hover:text-charcoal">
+              Learn More About Us
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Instagram Section */}
+      <section className="section-padding">
+        <div className="container-luxury">
+          <div className="text-center mb-12">
+            <h2 className="font-serif text-4xl md:text-5xl mb-4">
+              @LuxuryApparel
+            </h2>
+            <p className="text-soft-gray">
+              Follow us for daily inspiration
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="relative aspect-square overflow-hidden group cursor-pointer">
+                <Image
+                  src={`https://images.unsplash.com/photo-${1500000000000 + i * 100000}?w=400&q=80`}
+                  alt={`Instagram post ${i}`}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                />
+                <div className="absolute inset-0 bg-charcoal/0 group-hover:bg-charcoal/20 transition-colors" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
+```
+
+### **app/(shop)/layout.tsx**
+
+```typescript
+import Header from '@/components/layout/Header'
+import Footer from '@/components/layout/Footer'
+
+export default function ShopLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <>
+      <Header />
+      <main>{children}</main>
+      <Footer />
+    </>
+  )
+}
+```
+
+---
+
+## 🛒 SHOP PAGES
+
+### **components/shop/ProductCard.tsx**
+
+```typescript
+'use client'
+
+import Image from 'next/image'
+import Link from 'next/link'
+import { Heart } from 'lucide-react'
+import { Product, ProductVariant } from '@prisma/client'
+import { formatPrice } from '@/lib/utils'
+import { useWishlistStore } from '@/lib/store/wishlist-store'
+import { motion } from 'framer-motion'
+
+interface ProductCardProps {
+  product: Product & { variants: ProductVariant[] }
+}
+
+export default function ProductCard({ product }: ProductCardProps) {
+  const { isInWishlist, addItem, removeItem } = useWishlistStore()
+  const inWishlist = isInWishlist(product.id)
+
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (inWishlist) {
+      removeItem(product.id)
+    } else {
+      addItem(product.id)
+    }
+  }
+
+  const primaryImage = product.images[0]
+  const hoverImage = product.images[1] || primaryImage
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <Link href={`/product/${product.slug}`} className="group block">
+        <div className="relative aspect-[3/4] mb-4 overflow-hidden bg-stone/20">
+          <Image
+            src={primaryImage}
+            alt={product.name}
+            fill
+            className="object-cover transition-opacity duration-500 group-hover:opacity-0"
+            sizes="(max-width: 768px) 50vw, 25vw"
+          />
+          <Image
+            src={hoverImage}
+            alt={product.name}
+            fill
+            className="object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+            sizes="(max-width: 768px) 50vw, 25vw"
+          />
+
+          {/* Wishlist Button */}
+          <button
+            onClick={handleWishlistToggle}
+            className="absolute top-4 right-4 p-2 bg-ivory/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          >
+            <Heart
+              className={`h-5 w-5 ${
+                inWishlist ? 'fill-charcoal text-charcoal' : 'text-charcoal'
+              }`}
+            />
+          </button>
+
+          {/* Badges */}
+          {product.bestSeller && (
+            <div className="absolute top-4 left-4 bg-charcoal text-ivory px-3 py-1 text-xs tracking-widest">
+              BEST SELLER
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h3 className="font-medium mb-1 group-hover:text-gold transition-colors">
+            {product.name}
+          </h3>
+          <p className="text-sm text-soft-gray mb-2">{product.category}</p>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{formatPrice(product.price)}</span>
+            {product.compareAtPrice && (
+              <span className="text-sm text-soft-gray line-through">
+                {formatPrice(product.compareAtPrice)}
+              </span>
+            )}
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  )
+}
+```
+
+### **app/(shop)/shop/[gender]/page.tsx**
+
+```typescript
+import { Suspense } from 'react'
+import { prisma } from '@/lib/prisma'
+import { Gender } from '@prisma/client'
+import ProductCard from '@/components/shop/ProductCard'
+import ShopFilters from '@/components/shop/ShopFilters'
+import { notFound } from 'next/navigation'
+
+interface PageProps {
+  params: { gender: string }
+  searchParams: {
+    category?: string
+    sort?: string
+    minPrice?: string
+    maxPrice?: string
+  }
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const gender = params.gender.toUpperCase()
+  return {
+    title: `${params.gender.charAt(0).toUpperCase() + params.gender.slice(1)}'s Collection`,
+    description: `Shop premium ${params.gender}'s clothing and accessories`,
+  }
+}
+
+async function getProducts(params: PageProps['params'], searchParams: PageProps['searchParams']) {
+  const genderMap: Record<string, Gender> = {
+    'women': 'WOMEN',
+    'men': 'MEN',
+  }
+
+  const gender = genderMap[params.gender.toLowerCase()]
+  if (!gender) return null
+
+  const where: any = { gender }
+
+  if (searchParams.category) {
+    where.category = searchParams.category
+  }
+
+  if (searchParams.minPrice || searchParams.maxPrice) {
+    where.price = {}
+    if (searchParams.minPrice) {
+      where.price.gte = parseInt(searchParams.minPrice) * 100
+    }
+    if (searchParams.maxPrice) {
+      where.price.lte = parseInt(searchParams.maxPrice) * 100
+    }
+  }
+
+  let orderBy: any = { createdAt: 'desc' }
+  if (searchParams.sort === 'price-asc') {
+    orderBy = { price: 'asc' }
+  } else if (searchParams.sort === 'price-desc') {
+    orderBy = { price: 'desc' }
+  } else if (searchParams.sort === 'name') {
+    orderBy = { name: 'asc' }
+  }
+
+  return await prisma.product.findMany({
+    where,
+    include: { variants: true },
+    orderBy,
+  })
+}
+
+async function getCategories(gender: Gender) {
+  const products = await prisma.product.findMany({
+    where: { gender },
+    select: { category: true },
+    distinct: ['category'],
+  })
+  return products.map(p => p.category)
+}
+
+export default async function ShopPage({ params, searchParams }: PageProps) {
+  const genderMap: Record<string, Gender> = {
+    'women': 'WOMEN',
+    'men': 'MEN',
+  }
+
+  const gender = genderMap[params.gender.toLowerCase()]
+  if (!gender) notFound()
+
+  const [products, categories] = await Promise.all([
+    getProducts(params, searchParams),
+    getCategories(gender),
+  ])
+
+  if (!products) notFound()
+
+  return (
+    <div className="min-h-screen section-padding">
+      <div className="container-luxury">
+        {/* Header */}
+        <div className="mb-12">
+          <h1 className="font-serif text-4xl md:text-6xl mb-4">
+            {params.gender.charAt(0).toUpperCase() + params.gender.slice(1)}'s Collection
+          </h1>
+          <p className="text-soft-gray max-w-2xl">
+            Discover our curated selection of premium {params.gender}'s apparel, 
+            designed for the modern individual who values quality and timeless style.
+          </p>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-12">
+          {/* Filters */}
+          <aside className="md:w-64 flex-shrink-0">
+            <ShopFilters categories={categories} />
+          </aside>
+
+          {/* Products */}
+          <div className="flex-1">
+            <div className="flex justify-between items-center mb-6">
+              <p className="text-sm text-soft-gray">
+                {products.length} {products.length === 1 ? 'product' : 'products'}
+              </p>
+            </div>
+
+            {products.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-soft-gray">No products found matching your criteria.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+### **components/shop/ShopFilters.tsx**
+
+```typescript
+'use client'
+
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useState } from 'react'
+import Button from '../ui/Button'
+
+interface ShopFiltersProps {
+  categories: string[]
+}
+
+export default function ShopFilters({ categories }: ShopFiltersProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '')
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest')
+  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '')
+  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '')
+
+  const applyFilters = () => {
+    const params = new URLSearchParams()
+    
+    if (selectedCategory) params.set('category', selectedCategory)
+    if (sortBy !== 'newest') params.set('sort', sortBy)
+    if (minPrice) params.set('minPrice', minPrice)
+    if (maxPrice) params.set('maxPrice', maxPrice)
+
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
+  const clearFilters = () => {
+    setSelectedCategory('')
+    setSortBy('newest')
+    setMinPrice('')
+    setMaxPrice('')
+    router.push(pathname)
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Sort */}
+      <div>
+        <h3 className="font-medium mb-4">Sort By</h3>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="input-field w-full"
+        >
+          <option value="newest">Newest</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="name">Name: A to Z</option>
+        </select>
+      </div>
+
+      {/* Category */}
+      <div>
+        <h3 className="font-medium mb-4">Category</h3>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="category"
+              value=""
+              checked={selectedCategory === ''}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="accent-charcoal"
+            />
+            <span className="text-sm">All</span>
+          </label>
+          {categories.map((category) => (
+            <label key={category} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="category"
+                value={category}
+                checked={selectedCategory === category}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="accent-charcoal"
+              />
+              <span className="text-sm">{category}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Price Range */}
+      <div>
+        <h3 className="font-medium mb-4">Price Range</h3>
+        <div className="space-y-3">
+          <input
+            type="number"
+            placeholder="Min"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            className="input-field w-full"
+          />
+          <input
+            type="number"
+            placeholder="Max"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className="input-field w-full"
+          />
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="space-y-2">
+        <Button onClick={applyFilters} className="w-full">
+          Apply Filters
+        </Button>
+        <Button onClick={clearFilters} variant="ghost" className="w-full">
+          Clear All
+        </Button>
+      </div>
+    </div>
+  )
+}
+```
+
+---
+
+## 📦 PRODUCT DETAIL PAGE
+
+### **app/(shop)/product/[slug]/page.tsx**
+
+```typescript
+import { prisma } from '@/lib/prisma'
+import { notFound } from 'next/navigation'
+import ProductImageGallery from '@/components/shop/ProductImageGallery'
+import ProductDetails from '@/components/shop/ProductDetails'
+import RelatedProducts from '@/components/shop/RelatedProducts'
+
+interface PageProps {
+  params: { slug: string }
+}
+
+export async function generateMetadata({ params }: PageProps) {
+  const product = await prisma.product.findUnique({
+    where: { slug: params.slug },
+  })
+
+  if (!product) return {}
+
+  return {
+    title: product.metaTitle || product.name,
+    description: product.metaDescription || product.description,
+    openGraph: {
+      title: product.name,
+      description: product.description,
+      images: [{ url: product.images[0] }],
+    },
+  }
+}
+
+async function getProduct(slug: string) {
+  return await prisma.product.findUnique({
+    where: { slug },
+    include: { variants: true },
+  })
+}
+
+async function getRelatedProducts(productId: string, category: string, gender: any) {
+  return await prisma.product.findMany({
+    where: {
+      id: { not: productId },
+      category,
+      gender,
+    },
+    include: { variants: true },
+    take: 4,
+  })
+}
+
+export default async function ProductPage({ params }: PageProps) {
+  const product = await getProduct(params.slug)
+
+  if (!product) notFound()
+
+  const relatedProducts = await getRelatedProducts(
+    product.id,
+    product.category,
+    product.gender
+  )
+
+  return (
+    <div className="min-h-screen">
+      {/* Product Section */}
+      <section className="section-padding">
+        <div className="container-luxury">
+          <div className="grid md:grid-cols-2 gap-12">
+            <ProductImageGallery images={product.images} productName={product.name} />
+            <ProductDetails product={product} />
+          </div>
+        </div>
+      </section>
+
+      {/* Product Information Tabs */}
+      <section className="section-padding bg-stone/20">
+        <div className="container-luxury max-w-4xl">
+          <div className="space-y-8">
+            <div>
+              <h2 className="font-serif text-2xl mb-4">Description</h2>
+              <p className="text-soft-gray leading-relaxed">{product.description}</p>
+            </div>
+
+            {product.materials && (
+              <div>
+                <h2 className="font-serif text-2xl mb-4">Materials & Care</h2>
+                <p className="text-soft-gray leading-relaxed">{product.materials}</p>
+                {product.careInstructions && (
+                  <p className="text-soft-gray leading-relaxed mt-4">
+                    {product.careInstructions}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div>
+              <h2 className="font-serif text-2xl mb-4">Delivery & Returns</h2>
+              <div className="text-soft-gray space-y-2">
+                <p>• Free shipping on orders over $200</p>
+                <p>• Standard delivery: 3-5 business days</p>
+                <p>• Express delivery available</p>
+                <p>• Free returns within 30 days</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Related Products */}
+      {relatedProducts.length > 0 && (
+        <RelatedProducts products={relatedProducts} />
+      )}
+    </div>
+  )
+}
+```
+
+### **components/shop/ProductImageGallery.tsx**
+
+```typescript
+'use client'
+
+import Image from 'next/image'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+
+interface ProductImageGalleryProps {
+  images: string[]
+  productName: string
+}
+
+export default function ProductImageGallery({
+  images,
+  productName,
+}: ProductImageGalleryProps) {
+  const [selectedImage, setSelectedImage] = useState(0)
+
+  return (
+    <div className="space-y-4">
+      {/* Main Image */}
+      <div className="relative aspect-[3/4] bg-stone/20 overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={selectedImage}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="relative w-full h-full"
+          >
+            <Image
+              src={images[selectedImage]}
+              alt={`${productName} - Image ${selectedImage + 1}`}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Thumbnails */}
+      {images.length > 1 && (
+        <div className="grid grid-cols-4 gap-4">
+          {images.map((image, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedImage(index)}
+              className={`relative aspect-square bg-stone/20 overflow-hidden ${
+                selectedImage === index ? 'ring-2 ring-charcoal' : ''
+              }`}
+            >
+              <Image
+                src={image}
+                alt={`${productName} thumbnail ${index + 1}`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 25vw, 12.5vw"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+### **components/shop/ProductDetails.tsx**
+
+```typescript
+'use client'
+
+import { useState } from 'react'
+import { Product, ProductVariant } from '@prisma/client'
+import { formatPrice } from '@/lib/utils'
+import Button from '../ui/Button'
+import { Heart, Truck, RefreshCw } from 'lucide-react'
+import { useCartStore } from '@/lib/store/cart-store'
+import { useWishlistStore } from '@/lib/store/wishlist-store'
+import { toast } from 'react-hot-toast'
+
+interface ProductDetailsProps {
+  product: Product & { variants: ProductVariant[] }
+}
+
+export default function ProductDetails({ product }: ProductDetailsProps) {
+  const [selectedColor, setSelectedColor] = useState('')
+  const [selectedSize, setSelectedSize] = useState('')
+  const { addItem } = useCartStore()
+  const { isInWishlist, addItem: addToWishlist, removeItem: removeFromWishlist } = useWishlistStore()
+
+  const inWishlist = isInWishlist(product.id)
+
+  // Get unique colors and sizes
+  const colors = Array.from(
+    new Set(product.variants.map((v) => v.color))
+  )
+  const sizes = Array.from(
+    new Set(product.variants.map((v) => v.size))
+  ).sort()
+
+  // Find selected variant
+  const selectedVariant = product.variants.find(
+    (v) => v.color === selectedColor && v.size === selectedSize
+  )
+
+  const canAddToCart = selectedColor && selectedSize && selectedVariant && selectedVariant.inventory > 0
+
+  const handleAddToCart = () => {
+    if (!canAddToCart || !selectedVariant) return
+
+    addItem(product, selectedVariant)
+    toast.success('Added to cart')
+  }
+
+  const handleWishlistToggle = () => {
+    if (inWishlist) {
+      removeFromWishlist(product.id)
+      toast.success('Removed from wishlist')
+    } else {
+      addToWishlist(product.id)
+      toast.success('Added to wishlist')
+    }
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Product Info */}
+      <div>
+        <p className="text-sm tracking-widest uppercase text-soft-gray mb-2">
+          {product.category}
+        </p>
+        <h1 className="font-serif text-4xl md:text-5xl mb-4">
+          {product.name}
+        </h1>
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-2xl font-medium">
+            {formatPrice(product.price)}
+          </span>
+          {product.compareAtPrice && (
+            <span className="text-xl text-soft-gray line-through">
+              {formatPrice(product.compareAtPrice)}
+            </span>
+          )}
+        </div>
+        <p className="text-soft-gray leading-relaxed">
+          {product.description}
+        </p>
+      </div>
+
+      {/* Color Selection */}
+      <div>
+        <label className="block font-medium mb-3">
+          Color{selectedColor && `: ${selectedColor}`}
+        </label>
+        <div className="flex gap-3">
+          {colors.map((color) => {
+            const colorData = (product.colors as any[]).find(
+              (c) => c.name === color
+            )
+            return (
+              <button
+                key={color}
+                onClick={() => setSelectedColor(color)}
+                className={`w-12 h-12 rounded-full border-2 transition-all ${
+                  selectedColor === color
+                    ? 'border-charcoal scale-110'
+                    : 'border-charcoal/20'
+                }`}
+                style={{ backgroundColor: colorData?.hex || '#000' }}
+                title={color}
+              />
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Size Selection */}
+      <div>
+        <label className="block font-medium mb-3">
+          Size{selectedSize && `: ${selectedSize}`}
+        </label>
+        <div className="flex gap-3">
+          {sizes.map((size) => {
+            const variant = product.variants.find(
+              (v) => v.size === size && v.color === selectedColor
+            )
+            const isAvailable = variant && variant.inventory > 0
+            const isDisabled = !selectedColor || !isAvailable
+
+            return (
+              <button
+                key={size}
+                onClick={() => !isDisabled && setSelectedSize(size)}
+                disabled={isDisabled}
+                className={`px-6 py-3 border-2 transition-all ${
+                  selectedSize === size
+                    ? 'border-charcoal bg-charcoal text-ivory'
+                    : isDisabled
+                    ? 'border-charcoal/10 text-charcoal/30 cursor-not-allowed'
+                    : 'border-charcoal/20 hover:border-charcoal'
+                }`}
+              >
+                {size}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Stock Status */}
+      {selectedVariant && (
+        <div>
+          {selectedVariant.inventory > 0 ? (
+            <p className="text-sm text-green-700">
+              {selectedVariant.inventory < 5
+                ? `Only ${selectedVariant.inventory} left in stock`
+                : 'In stock'}
+            </p>
+          ) : (
+            <p className="text-sm text-red-700">Out of stock</p>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="space-y-3">
+        <Button
+          onClick={handleAddToCart}
+          disabled={!canAddToCart}
+          className="w-full"
+          size="lg"
+        >
+          Add to Cart
+        </Button>
+
+        <Button
+          onClick={handleWishlistToggle}
+          variant="secondary"
+          className="w-full"
+          size="lg"
+        >
+          <Heart
+            className={`h-5 w-5 mr-2 ${
+              inWishlist ? 'fill-charcoal' : ''
+            }`}
+          />
+          {inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
+        </Button>
+      </div>
+
+      {/* Features */}
+      <div className="border-t border-charcoal/10 pt-8 space-y-4">
+        <div className="flex gap-4">
+          <Truck className="h-6 w-6 flex-shrink-0" />
+          <div>
+            <p className="font-medium">Free Shipping</p>
+            <p className="text-sm text-soft-gray">
+              On orders over $200
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-4">
+          <RefreshCw className="h-6 w-6 flex-shrink-0" />
+          <div>
+            <p className="font-medium">Free Returns</p>
+            <p className="text-sm text-soft-gray">
+              30-day return policy
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+### **components/shop/RelatedProducts.tsx**
+
+```typescript
+import { Product, ProductVariant } from '@prisma/client'
+import ProductCard from './ProductCard'
+
+interface RelatedProductsProps {
+  products: (Product & { variants: ProductVariant[] })[]
+}
+
+export default function RelatedProducts({ products }: RelatedProductsProps) {
+  return (
+    <section className="section-padding">
+      <div className="container-luxury">
+        <h2 className="font-serif text-3xl md:text-4xl mb-12 text-center">
+          You May Also Like
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+```
+
+---
+
+Due to character limits, I'll continue with the **Cart, Checkout, API Routes, Admin Dashboard**, and **remaining critical files** in the next response.
+
+Would you like me to continue with:
+1. Cart & Checkout pages
+2. API routes (auth, products, orders, stripe)
+3. Admin dashboard
+4. Authentication pages
+5. User account pages
+6. Middleware & deployment setup
+
+Let me know and I'll deliver the complete remaining codebase!
