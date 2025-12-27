@@ -21,7 +21,8 @@ A production-ready luxury e-commerce platform built with Next.js 14, Prisma, Str
 - **Payments:** Stripe
 - **Authentication:** NextAuth.js
 - **Email:** Nodemailer
-- **Deployment:** Vercel
+- **Deployment:** Vercel / netlifi
+- **URL:** https://luxuryapl.growbits.tech
 
 ## Prerequisites
 
